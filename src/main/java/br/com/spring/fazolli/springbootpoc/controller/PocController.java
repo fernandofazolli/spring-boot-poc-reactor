@@ -1,16 +1,13 @@
 package br.com.spring.fazolli.springbootpoc.controller;
 
-import br.com.spring.fazolli.springbootpoc.consumer.PocConsumer;
-import br.com.spring.fazolli.springbootpoc.repository.PocRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
-import reactor.bus.Event;
-import reactor.bus.EventBus;
+import br.com.spring.fazolli.springbootpoc.entity.PocEntity;
+import br.com.spring.fazolli.springbootpoc.service.PocService;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import static reactor.bus.selector.Selectors.$;
+import java.util.UUID;
 
 
 /**
@@ -20,26 +17,36 @@ import static reactor.bus.selector.Selectors.$;
 @RequestMapping(value = "poc-reactor")
 public class PocController {
 
-    private PocRepository repository;
+    private PocService service;
 
-    private EventBus eventBus;
-
-    @Autowired
-    public PocController(PocRepository repository, EventBus eventBus, PocConsumer consumer) {
-        this.repository = repository;
-        this.eventBus = eventBus;
-        this.eventBus.on($("find_async"), consumer);
+    public PocController(PocService service) {
+        this.service = service;
     }
 
-    @RequestMapping(value = "/{name}", method = RequestMethod.GET)
-    public String find(@PathVariable("name") String name){
-
-        return repository.find(name);
+    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<PocEntity> find(@PathVariable("id") UUID id){
+         return service.find(id);
     }
 
-    @RequestMapping(value = "/async/{name}", method = RequestMethod.GET)
-    public void findAsync(@PathVariable("name") String name){
-        eventBus.notify("find_async", Event.wrap(name));
+    @GetMapping(value = "/", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Flux<PocEntity> findAll(){
+        return service.find();
     }
 
+    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<PocEntity> save(@RequestBody PocEntity entity){
+        return service.save(entity);
+    }
+
+    @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public String delete(@PathVariable("id") UUID id){
+        Mono<Void> retorno = service.delete(id);
+        retorno.block();
+        return "Deletado com sucesso";
+    }
+
+    @PutMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<PocEntity> update(@RequestBody PocEntity entity){
+        return service.update(entity);
+    }
 }
